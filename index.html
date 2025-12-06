@@ -4,32 +4,27 @@
 <meta charset="UTF-8">
 <title>Secret Santa 聖誕交換禮物抽籤系統</title>
 <style>
-  /* 基礎設定與字體 */
+  /* 聖誕風格排版 (CSS 與上次提供版本一致) */
   body { 
-    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Microsoft JhengHei", sans-serif; /* 統一中英文手機友善字體 */
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Microsoft JhengHei", sans-serif;
     padding: 20px; 
     max-width: 900px; 
     margin: auto; 
-    background-color: #f0f0f0; /* 淺灰色底 */
+    background-color: #f0f0f0; 
     color: #333;
   }
-  
-  /* 聖誕主題顏色 */
   .header-icon {
-    color: #c0392b; /* 深紅 */
+    color: #c0392b; 
     font-size: 1.2em;
     margin-right: 8px;
   }
-  
   h2 { 
-    color: #c0392b; /* 聖誕紅 */
+    color: #c0392b; 
     font-size: 28px;
-    border-bottom: 3px solid #006400; /* 聖誕綠底線 */
+    border-bottom: 3px solid #006400;
     padding-bottom: 10px;
     margin-top: 0;
   }
-  
-  /* 輸入框與選單 */
   textarea, input, select { 
     width: 100%; 
     padding: 12px; 
@@ -37,24 +32,19 @@
     font-size: 16px; 
     border: 1px solid #ccc;
     border-radius: 5px;
-    box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
+    box-sizing: border-box; 
   }
-  
   .hidden { display: none; }
-  
-  /* 區塊樣式 */
   .box { 
     padding: 25px; 
     background: #ffffff; 
     border-radius: 12px; 
     margin-top: 25px; 
-    border: 2px solid #006400; /* 聖誕綠邊框 */
+    border: 2px solid #006400; 
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
   }
-  
-  /* 按鈕樣式 */
   button { 
-    background: #c0392b; /* 聖誕紅 */
+    background: #c0392b; 
     color: #fff; 
     width: 100%; 
     padding: 14px; 
@@ -66,40 +56,47 @@
     margin-top: 15px; 
     transition: background 0.3s ease;
   }
-  
   button:hover {
-    background: #a03020; /* hover 時更深紅 */
+    background: #a03020;
   }
-
   label { 
     font-weight: bold; 
     font-size: 16px; 
     display: block;
     margin-top: 15px;
   }
-  
   hr {
     border: 0;
     height: 1px;
     background-image: linear-gradient(to right, rgba(0, 0, 0, 0), #006400, rgba(0, 0, 0, 0));
     margin: 20px 0;
   }
-
   a {
-      color: #006400; /* 連結使用聖誕綠 */
-      word-break: break-all; /* 防止長連結超出容器 */
+      color: #006400; 
+      word-break: break-all; 
   }
-
-  /* 結果/狀態強調 */
   .status-complete {
-    color: #006400; /* 綠色，強調已完成 */
+    color: #006400; 
     font-weight: bold;
   }
   .status-pending {
-    color: #c0392b; /* 紅色，強調未完成 */
+    color: #c0392b; 
     font-weight: bold;
   }
-
+  #manualImportSection {
+      border: 1px dashed #c0392b;
+      padding: 15px;
+      margin-top: 20px;
+      background-color: #ffe0e0;
+      border-radius: 8px;
+  }
+  .recovery-box {
+      border: 1px solid #ccc;
+      padding: 10px;
+      background-color: #f9f9f9;
+      margin-top: 15px;
+      border-radius: 5px;
+  }
   /* 手機排版優化 */
   @media (max-width: 600px) {
     body { padding: 16px; }
@@ -120,6 +117,13 @@
 <button onclick="generateForms()">生成提示卡連結</button>
 
 <div id="formsSection" class="box hidden"></div>
+
+<div id="manualImportSection" class="hidden">
+    <h3>🚨 手動導入/恢復填寫數據</h3>
+    <p>如果有人已填寫但狀態仍顯示「未填寫」，請要求他們提供**填寫完成頁面上的「恢復代碼」**，貼到下方並點擊導入。</p>
+    <textarea id="manualData" placeholder="請貼上參與者提供的恢復代碼..."></textarea>
+    <button onclick="importManualData()">導入數據並刷新狀態</button>
+</div>
 
 <button id="drawBtn" class="hidden" onclick="startDraw()">開始抽籤（所有人填完提示卡後按）</button>
 <div id="result" class="box hidden"></div>
@@ -149,6 +153,7 @@ function loadOrganizerData() {
 
     if(participants.length > 0) {
         generateForms(false); 
+        document.getElementById("manualImportSection").classList.remove("hidden");
     }
 }
 
@@ -182,6 +187,7 @@ function generateForms(isNew = true) {
     document.getElementById("formsSection").innerHTML = html;
     document.getElementById("formsSection").classList.remove("hidden");
     document.getElementById("drawBtn").classList.remove("hidden");
+    document.getElementById("manualImportSection").classList.remove("hidden");
     
     if (Object.keys(formData).length === participants.length && participants.length > 0) {
         document.getElementById("drawBtn").innerText = "開始抽籤（所有人都已填寫）";
@@ -189,6 +195,30 @@ function generateForms(isNew = true) {
         document.getElementById("drawBtn").innerText = `開始抽籤（還有 ${participants.length - Object.keys(formData).length} 人未填）`;
     }
 }
+
+function importManualData() {
+    const dataString = document.getElementById("manualData").value.trim();
+    if (!dataString) return alert("請先貼上有效的恢復代碼。");
+
+    try {
+        const decodedData = JSON.parse(decodeURIComponent(atob(dataString)));
+        const { name, cardData } = decodedData;
+
+        if (!name || !cardData) throw new Error("無效的代碼結構。");
+
+        // 更新數據並保存
+        formData[name] = cardData;
+        saveOrganizerData();
+        
+        alert(`成功導入 ${name} 的提示卡數據！頁面將自動刷新。`);
+        window.location.reload();
+
+    } catch (e) {
+        console.error("導入失敗:", e);
+        alert("導入失敗！請確認代碼是否完整且正確。");
+    }
+}
+
 
 function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
@@ -239,9 +269,24 @@ if (params.has("form")) {
     const name = data.name;
 
     const isCompleted = localStorage.getItem(`secretSanta_${name}_completed`);
+    const savedRecoveryCode = localStorage.getItem(`secretSanta_${name}_recovery`); // 💡 讀取保存的代碼
 
     if (isCompleted) {
-        document.body.innerHTML = `<div class="box"><h2>✅ 提示卡已成功提交！</h2><p>您已經在 ${isCompleted} 填寫完畢，無需重複操作。您現在可以關閉此頁面。</p></div>`;
+        let completedHtml = `<div class="box"><h2>✅ 提示卡已成功提交！</h2>
+                             <p>您已經在 ${isCompleted} 填寫完畢，無需重複操作。您現在可以關閉此頁面。</p>`;
+
+        if (savedRecoveryCode) {
+             completedHtml += `<hr>
+                               <div class="recovery-box">
+                                   <h3 style="color: #c0392b; margin-top: 0;">💾 數據備份代碼 (主辦人恢復用)</h3>
+                                   <p>如果主辦人告訴您他看不到您的數據，請將下方代碼複製給他。</p>
+                                   <textarea rows="4" readonly style="resize: none; background-color: #f7f7f7; font-size: 14px;">${savedRecoveryCode}</textarea>
+                                   <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">複製備份代碼</button>
+                               </div>`;
+        }
+        completedHtml += `</div>`;
+        document.body.innerHTML = completedHtml;
+
     } else {
         document.body.innerHTML = `
         <div class="box">
@@ -262,7 +307,6 @@ if (params.has("form")) {
 }
 
 function submitForm(name) {
-    // 💡 更新後的資料結構 (替換了 treat，新增了 color/shape)
     const cardData = {
         color: document.getElementById("c1").value || '未提供',
         shape: document.getElementById("c2").value || '未提供',
@@ -273,7 +317,6 @@ function submitForm(name) {
         note: document.getElementById("c7").value || '無'
     };
     
-    // 💡 更新強制填寫檢查
     if (cardData.color === '未提供' && 
         cardData.shape === '未提供' && 
         cardData.scene === '未提供' && 
@@ -283,6 +326,18 @@ function submitForm(name) {
         return alert("請至少填寫幾項資訊幫助你的 Secret Santa！");
     }
 
+    // 💡 永遠生成手動恢復代碼
+    const recoveryPayload = { name: name, cardData: cardData };
+    const manualRecoveryCode = btoa(encodeURIComponent(JSON.stringify(recoveryPayload)));
+    
+    // 💡 永遠保存到參與者自己的 localStorage
+    localStorage.setItem(`secretSanta_${name}_recovery`, manualRecoveryCode);
+    const now = new Date().toLocaleString();
+    localStorage.setItem(`secretSanta_${name}_completed`, now); // 保存完成標記
+
+    let autoTransferSuccess = false;
+    
+    // 嘗試自動傳輸數據到主辦人頁面
     try {
         if (window.opener && window.opener.localStorage) {
             let organizerData = JSON.parse(window.opener.localStorage.getItem('secretSantaFormData') || '{}');
@@ -292,16 +347,31 @@ function submitForm(name) {
             if (window.opener.document.getElementById("formsSection")) {
                 window.opener.location.reload(); 
             }
+            autoTransferSuccess = true;
         }
-        
-        const now = new Date().toLocaleString();
-        localStorage.setItem(`secretSanta_${name}_completed`, now);
-        
     } catch (e) {
-        console.error("無法寫入 localStorage", e);
+        console.warn("自動傳輸失敗：主辦人頁面可能已關閉或無效。", e);
     }
     
-    document.body.innerHTML = `<div class="box"><h2>✅ 提示卡提交成功！</h2><p>你可以關閉此頁面，並通知主辦人你已完成填寫。</p></div>`;
+    let resultHtml = `<div class="box"><h2>✅ 提示卡提交成功！</h2><p>你可以關閉此頁面，並通知主辦人你已完成填寫。</p>`;
+    
+    // 如果自動回傳失敗，則明確顯示代碼
+    if (!autoTransferSuccess) {
+        resultHtml += `<hr>
+                       <h3 style="color: #c0392b;">🚨 重要提示：請將以下代碼傳給主辦人！</h3>
+                       <p>您的數據未能自動傳輸。為確保您的數據被計算在內，請**複製下方的恢復代碼**，並發送給主辦人進行手動導入。</p>
+                       <textarea rows="4" readonly style="resize: none; background-color: #f7f7f7; font-size: 14px;">${manualRecoveryCode}</textarea>
+                       <button onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">複製恢復代碼</button>
+                       </div>`;
+    } else {
+        // 如果自動回傳成功，也提示代碼已被備份
+         resultHtml += `<hr>
+                        <p style="color: #006400; font-weight: bold;">數據已自動回傳給主辦人。</p>
+                        <p>為防止主辦人數據遺失，我們已將備份代碼儲存在您的瀏覽器中。如果您需要再次提供給主辦人，請重新點擊您的專屬連結。</p>
+                        </div>`;
+    }
+
+    document.body.innerHTML = resultHtml;
 }
 
 if (params.has("result")) {
