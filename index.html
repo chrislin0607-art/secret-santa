@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>Secret Santa 聖誕交換禮物抽籤系統</title>
+<style>
+  /* 基礎設定與字體 */
+  body { 
+    font-family: "Helvetica Neue", Helvetica, Arial, "PingFang TC", "Microsoft JhengHei", sans-serif; /* 統一中英文手機友善字體 */
+    padding: 20px; 
+    max-width: 900px; 
+    margin: auto; 
+    background-color: #f0f0f0; /* 淺灰色底 */
+    color: #333;
+  }
+  
+  /* 聖誕主題顏色 */
+  .header-icon {
+    color: #c0392b; /* 深紅 */
+    font-size: 1.2em;
+    margin-right: 8px;
+  }
+  
+  h2 { 
+    color: #c0392b; /* 聖誕紅 */
+    font-size: 28px;
+    border-bottom: 3px solid #006400; /* 聖誕綠底線 */
+    padding-bottom: 10px;
+    margin-top: 0;
+  }
+  
+  /* 輸入框與選單 */
+  textarea, input, select { 
+    width: 100%; 
+    padding: 12px; 
+    margin: 8px 0; 
+    font-size: 16px; 
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    box-sizing: border-box; /* 確保 padding 不會撐大寬度 */
+  }
+  
+  .hidden { display: none; }
+  
+  /* 區塊樣式 */
+  .box { 
+    padding: 25px; 
+    background: #ffffff; 
+    border-radius: 12px; 
+    margin-top: 25px; 
+    border: 2px solid #006400; /* 聖誕綠邊框 */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* 按鈕樣式 */
+  button { 
+    background: #c0392b; /* 聖誕紅 */
+    color: #fff; 
+    width: 100%; 
+    padding: 14px; 
+    border: none;
+    border-radius: 8px; 
+    cursor: pointer; 
+    font-size: 18px; 
+    font-weight: bold;
+    margin-top: 15px; 
+    transition: background 0.3s ease;
+  }
+  
+  button:hover {
+    background: #a03020; /* hover 時更深紅 */
+  }
+
+  label { 
+    font-weight: bold; 
+    font-size: 16px; 
+    display: block;
+    margin-top: 15px;
+  }
+  
+  hr {
+    border: 0;
+    height: 1px;
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0), #006400, rgba(0, 0, 0, 0));
+    margin: 20px 0;
+  }
+
+  a {
+      color: #006400; /* 連結使用聖誕綠 */
+      word-break: break-all; /* 防止長連結超出容器 */
+  }
+
+  /* 結果/狀態強調 */
+  .status-complete {
+    color: #006400; /* 綠色，強調已完成 */
+    font-weight: bold;
+  }
+  .status-pending {
+    color: #c0392b; /* 紅色，強調未完成 */
+    font-weight: bold;
+  }
+
+  /* 手機排版優化 */
+  @media (max-width: 600px) {
+    body { padding: 16px; }
+    h2 { font-size: 24px; }
+    .box { padding: 18px; }
+    button { font-size: 16px; padding: 12px; }
+    textarea { height: 120px; }
+  }
+</style>
+</head>
+<body>
+
+<h2><span class="header-icon">🎁</span> Secret Santa 全自動抽籤 + 提示卡系統 <span class="header-icon">🎅</span></h2>
+<p>步驟 1：主辦人輸入參加者名單 → 系統會自動產生「每個人的專屬填寫提示卡連結」。</p >
+<p>步驟 2：所有人填完提示卡後，主辦人按「開始抽籤」→ 系統自動抽籤 + 自動分配提示卡資訊。</p >
+
+<textarea id="names" placeholder="每行一個名字，例如：&#10;Chris&#10;Kelly&#10;David"></textarea>
+<button onclick="generateForms()">生成提示卡連結</button>
+
+<div id="formsSection" class="box hidden"></div>
+
+<button id="drawBtn" class="hidden" onclick="startDraw()">開始抽籤（所有人填完提示卡後按）</button>
+<div id="result" class="box hidden"></div>
+
+<script>
+// 程式邏輯部分與優化後版本完全相同
+let participants = [];
+let formLinks = {};
+let formData = {};
+
+function saveOrganizerData() {
+    localStorage.setItem('secretSantaParticipants', JSON.stringify(participants));
+    localStorage.setItem('secretSantaFormData', JSON.stringify(formData));
+}
+
+function loadOrganizerData() {
+    const storedNames = localStorage.getItem('secretSantaParticipants');
+    const storedData = localStorage.getItem('secretSantaFormData');
+    
+    if (storedNames) {
+        participants = JSON.parse(storedNames);
+        document.getElementById("names").value = participants.join('\n');
+    }
+    
+    if (storedData) {
+        formData = JSON.parse(storedData);
+    }
+
+    if(participants.length > 0) {
+        generateForms(false); 
+    }
+}
+
+
+function generateForms(isNew = true) {
+    if(isNew) {
+        const input = document.getElementById("names").value.trim();
+        if (!input) return alert("請輸入名稱");
+        participants = input.split("\n").map(n => n.trim()).filter(n => n);
+        
+        if (participants.length < 3) return alert("至少 3 個人參加");
+        formData = {};
+    }
+
+    saveOrganizerData(); 
+
+    const base = window.location.href.split("?")[0];
+    let html = `<h3>請把以下提示卡填寫連結分別發給每位參加者：</h3>`;
+
+    participants.forEach(name => {
+        const isComplete = formData[name];
+        const statusClass = isComplete ? 'status-complete' : 'status-pending';
+        const statusText = isComplete ? '✅ 已填寫' : '❌ 未填寫';
+
+        const token = btoa(encodeURIComponent(JSON.stringify({ name })));
+        const url = `${base}?form=${token}`;
+        formLinks[name] = url;
+        html += `<p><b>${name}</b> (<span class="${statusClass}">${statusText}</span>) 的提示卡連結：<br><a href="${url}" target="_blank">${url}</a ></p ><hr>`;
+    });
+
+    document.getElementById("formsSection").innerHTML = html;
+    document.getElementById("formsSection").classList.remove("hidden");
+    document.getElementById("drawBtn").classList.remove("hidden");
+    
+    if (Object.keys(formData).length === participants.length && participants.length > 0) {
+        document.getElementById("drawBtn").innerText = "開始抽籤（所有人都已填寫）";
+    } else {
+        document.getElementById("drawBtn").innerText = `開始抽籤（還有 ${participants.length - Object.keys(formData).length} 人未填）`;
+    }
+}
+
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function startDraw() {
+    if (Object.keys(formData).length !== participants.length)
+        return alert(`還有 ${participants.length - Object.keys(formData).length} 位參加者尚未填寫提示卡！`);
+
+    let receivers = shuffle([...participants]);
+
+    let attempts = 0;
+    while (receivers.some((r, i) => r === participants[i]) && attempts < 100) {
+        receivers = shuffle([...participants]);
+        attempts++;
+    }
+    
+    if (attempts >= 100) {
+         return alert("無法在 100 次嘗試內找到沒有人抽到自己的配對，請重試！");
+    }
+
+    let base = window.location.href.split("?")[0];
+    let output = `<h3>抽籤完成！以下是每個人的專屬查詢連結：</h3>`;
+
+    participants.forEach((sender, i) => {
+        const receiver = receivers[i];
+        const card = formData[receiver];
+        const token = btoa(encodeURIComponent(JSON.stringify({ sender, receiver, card })));
+        const url = `${base}?result=${token}`;
+        output += `<p><b>${sender}</b> 的查看連結：<br><a href="${url}" target="_blank">${url}</a ></p ><hr>`;
+    });
+
+    document.getElementById("result").innerHTML = output;
+    document.getElementById("result").classList.remove("hidden");
+    localStorage.removeItem('secretSantaFormData');
+    localStorage.removeItem('secretSantaParticipants'); 
+}
+
+const params = new URLSearchParams(window.location.search);
+
+if (params.has("form")) {
+    const data = JSON.parse(decodeURIComponent(atob(params.get("form"))));
+    const name = data.name;
+
+    const isCompleted = localStorage.getItem(`secretSanta_${name}_completed`);
+
+    if (isCompleted) {
+        document.body.innerHTML = `<div class="box"><h2>✅ 提示卡已成功提交！</h2><p>您已經在 ${isCompleted} 填寫完畢，無需重複操作。您現在可以關閉此頁面。</p></div>`;
+    } else {
+        document.body.innerHTML = `
+        <div class="box">
+          <h2>🎁 ${name} 的提示卡</h2>
+          <p>請為你的 Secret Santa 提供**方向性**提示，避免具體到特定物品，讓禮物更有驚喜！</p>
+          <label>1. **偏好的使用場景**</label><input id="c1" placeholder="例如：在家裡放鬆時、在辦公桌上實用、戶外活動時可用">
+          <label>2. **喜歡的風格或主題**</label><input id="c2" placeholder="例如：北歐簡約風、復古文青感、科技實用派、療癒香氛">
+          <label>3. **你平常會購買但不會主動送給自己的東西**</label><input id="c3" placeholder="例如：高品質咖啡豆、設計師文具、造型可愛的襪子">
+          <label>4. **希望避開的類型**</label><input id="c4" placeholder="例如：食物/飲料、化妝/保養品、體積大/難搬運的物品">
+          <label>5. **關於質感或材質的偏好**</label><input id="c5" placeholder="例如：偏好木質/皮革、喜歡軟綿綿的觸感、討厭塑膠感太重">
+          <label>6. **給聖誕老人的小提示**（可不填）</label><textarea id="c6" placeholder="例如：最近在看書、常需要舒壓小物，或你喜歡的顏色等..."></textarea>
+          <button onclick="submitForm('${name}')">提交提示卡</button>
+        </div>`;
+    }
+}
+
+function submitForm(name) {
+    const cardData = {
+        scene: document.getElementById("c1").value || '未提供',
+        style: document.getElementById("c2").value || '未提供',
+        treat: document.getElementById("c3").value || '未提供',
+        avoid: document.getElementById("c4").value || '未提供',
+        material: document.getElementById("c5").value || '未提供',
+        note: document.getElementById("c6").value || '無'
+    };
+    
+    if (cardData.scene === '未提供' && cardData.style === '未提供' && cardData.treat === '未提供' && cardData.avoid === '未提供' && cardData.material === '未提供') {
+        return alert("請至少填寫幾項資訊幫助你的 Secret Santa！");
+    }
+
+    try {
+        if (window.opener && window.opener.localStorage) {
+            let organizerData = JSON.parse(window.opener.localStorage.getItem('secretSantaFormData') || '{}');
+            organizerData[name] = cardData;
+            window.opener.localStorage.setItem('secretSantaFormData', JSON.stringify(organizerData));
+            
+            if (window.opener.document.getElementById("formsSection")) {
+                window.opener.location.reload(); 
+            }
+        }
+        
+        const now = new Date().toLocaleString();
+        localStorage.setItem(`secretSanta_${name}_completed`, now);
+        
+    } catch (e) {
+        console.error("無法寫入 localStorage", e);
+    }
+    
+    document.body.innerHTML = `<div class="box"><h2>✅ 提示卡提交成功！</h2><p>你可以關閉此頁面，並通知主辦人你已完成填寫。</p></div>`;
+}
+
+if (params.has("result")) {
+    const data = JSON.parse(decodeURIComponent(atob(params.get("result"))));
+    document.body.innerHTML = `
+    <div class="box">
+      <h2>🎄 你的交換禮物對象</h2>
+      <p><b>${data.sender}</b>，你要準備禮物給：</p >
+      <h2 style="font-size: 32px; color: #c0392b;">${data.receiver}</h2>
+      <hr>
+      <h3>🎁 對方的提示卡資訊</h3>
+      <p><b>1. 偏好的使用場景：</b> ${data.card.scene}</p >
+      <p><b>2. 喜歡的風格或主題：</b> ${data.card.style}</p >
+      <p><b>3. 不會主動買給自己的東西：</b> ${data.card.treat}</p >
+      <p><b>4. 希望避開的類型：</b> ${data.card.avoid}</p >
+      <p><b>5. 關於質感或材質的偏好：</b> ${data.card.material}</p >
+      <p><b>6. 給聖誕老人的小提示：</b> ${data.card.note}</p >
+    </div>`;
+}
+
+if (!params.has("form") && !params.has("result")) {
+    loadOrganizerData();
+}
+</script>
+</body>
+</html>
