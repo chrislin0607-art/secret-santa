@@ -125,7 +125,6 @@
 <div id="result" class="box hidden"></div>
 
 <script>
-// 程式邏輯部分與優化後版本完全相同
 let participants = [];
 let formLinks = {};
 let formData = {};
@@ -228,6 +227,7 @@ function startDraw() {
 
     document.getElementById("result").innerHTML = output;
     document.getElementById("result").classList.remove("hidden");
+    // 抽籤完成後清除主辦人本地的填寫資料，避免下次活動混淆
     localStorage.removeItem('secretSantaFormData');
     localStorage.removeItem('secretSantaParticipants'); 
 }
@@ -246,29 +246,40 @@ if (params.has("form")) {
         document.body.innerHTML = `
         <div class="box">
           <h2>🎁 ${name} 的提示卡</h2>
-          <p>請為你的 Secret Santa 提供**方向性**提示，避免具體到特定物品，讓禮物更有驚喜！</p>
-          <label>1. **偏好的使用場景**</label><input id="c1" placeholder="例如：在家裡放鬆時、在辦公桌上實用、戶外活動時可用">
-          <label>2. **喜歡的風格或主題**</label><input id="c2" placeholder="例如：北歐簡約風、復古文青感、科技實用派、療癒香氛">
-          <label>3. **你平常會購買但不會主動送給自己的東西**</label><input id="c3" placeholder="例如：高品質咖啡豆、設計師文具、造型可愛的襪子">
-          <label>4. **希望避開的類型**</label><input id="c4" placeholder="例如：食物/飲料、化妝/保養品、體積大/難搬運的物品">
-          <label>5. **關於質感或材質的偏好**</label><input id="c5" placeholder="例如：偏好木質/皮革、喜歡軟綿綿的觸感、討厭塑膠感太重">
-          <label>6. **給聖誕老人的小提示**（可不填）</label><textarea id="c6" placeholder="例如：最近在看書、常需要舒壓小物，或你喜歡的顏色等..."></textarea>
+          <p>請為你的 Secret Santa 提供**方向性**提示，讓禮物更有驚喜！</p>
+          
+          <label>1. **喜歡的顏色**</label><input id="c1" placeholder="例如：藍色、灰色、米白（請提供一個主要色系）">
+          <label>2. **喜歡的形狀或外觀**</label><input id="c2" placeholder="例如：幾何圖形、圓潤可愛、簡約俐落、動物造型">
+          <label>3. **偏好的使用場景**</label><input id="c3" placeholder="例如：在家裡放鬆時、在辦公桌上實用、戶外活動時可用">
+          <label>4. **喜歡的風格或主題**</label><input id="c4" placeholder="例如：北歐簡約風、復古文青感、科技實用派、療癒香氛">
+          <label>5. **希望避開的類型**</label><input id="c5" placeholder="例如：食物/飲料、化妝/保養品、體積大/難搬運的物品">
+          <label>6. **關於質感或材質的偏好**</label><input id="c6" placeholder="例如：偏好木質/皮革、喜歡軟綿綿的觸感、討厭塑膠感太重">
+          <label>7. **給聖誕老人的小提示**（可不填）</label><textarea id="c7" placeholder="例如：最近在看書、常需要舒壓小物，或你喜歡的圖案等..."></textarea>
+
           <button onclick="submitForm('${name}')">提交提示卡</button>
         </div>`;
     }
 }
 
 function submitForm(name) {
+    // 💡 更新後的資料結構 (替換了 treat，新增了 color/shape)
     const cardData = {
-        scene: document.getElementById("c1").value || '未提供',
-        style: document.getElementById("c2").value || '未提供',
-        treat: document.getElementById("c3").value || '未提供',
-        avoid: document.getElementById("c4").value || '未提供',
-        material: document.getElementById("c5").value || '未提供',
-        note: document.getElementById("c6").value || '無'
+        color: document.getElementById("c1").value || '未提供',
+        shape: document.getElementById("c2").value || '未提供',
+        scene: document.getElementById("c3").value || '未提供',
+        style: document.getElementById("c4").value || '未提供',
+        avoid: document.getElementById("c5").value || '未提供',
+        material: document.getElementById("c6").value || '未提供',
+        note: document.getElementById("c7").value || '無'
     };
     
-    if (cardData.scene === '未提供' && cardData.style === '未提供' && cardData.treat === '未提供' && cardData.avoid === '未提供' && cardData.material === '未提供') {
+    // 💡 更新強制填寫檢查
+    if (cardData.color === '未提供' && 
+        cardData.shape === '未提供' && 
+        cardData.scene === '未提供' && 
+        cardData.style === '未提供' && 
+        cardData.avoid === '未提供' && 
+        cardData.material === '未提供') {
         return alert("請至少填寫幾項資訊幫助你的 Secret Santa！");
     }
 
@@ -302,12 +313,15 @@ if (params.has("result")) {
       <h2 style="font-size: 32px; color: #c0392b;">${data.receiver}</h2>
       <hr>
       <h3>🎁 對方的提示卡資訊</h3>
-      <p><b>1. 偏好的使用場景：</b> ${data.card.scene}</p >
-      <p><b>2. 喜歡的風格或主題：</b> ${data.card.style}</p >
-      <p><b>3. 不會主動買給自己的東西：</b> ${data.card.treat}</p >
-      <p><b>4. 希望避開的類型：</b> ${data.card.avoid}</p >
-      <p><b>5. 關於質感或材質的偏好：</b> ${data.card.material}</p >
-      <p><b>6. 給聖誕老人的小提示：</b> ${data.card.note}</p >
+      
+      <p><b>1. 喜歡的顏色：</b> ${data.card.color}</p >
+      <p><b>2. 喜歡的形狀或外觀：</b> ${data.card.shape}</p >
+      <p><b>3. 偏好的使用場景：</b> ${data.card.scene}</p >
+      <p><b>4. 喜歡的風格或主題：</b> ${data.card.style}</p >
+      <p><b>5. 希望避開的類型：</b> ${data.card.avoid}</p >
+      <p><b>6. 關於質感或材質的偏好：</b> ${data.card.material}</p >
+      <p><b>7. 給聖誕老人的小提示：</b> ${data.card.note}</p >
+
     </div>`;
 }
 
